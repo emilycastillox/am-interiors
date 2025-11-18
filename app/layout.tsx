@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const theseasons = localFont({
@@ -59,6 +60,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           {children}
           <Analytics />
+          <Toaster />
         </Suspense>
       </body>
     </html>
