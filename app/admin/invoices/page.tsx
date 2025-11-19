@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, Edit, Trash2, ArrowLeft } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
 
 interface Client {
   id: string
@@ -123,6 +123,34 @@ export default function InvoicesPage() {
     }
   }
 
+  const handleStatusChange = async (invoiceId: string, newStatus: string) => {
+    try {
+      const invoice = invoices.find((inv) => inv.id === invoiceId)
+      if (!invoice) return
+
+      const response = await fetch(`/api/invoices/${invoiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: invoice.clientId,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: invoice.amount,
+          status: newStatus,
+          dueDate: invoice.dueDate,
+          description: invoice.description,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update status")
+
+      toast.success("Status updated successfully")
+      fetchInvoices()
+    } catch (error) {
+      console.error("Error updating status:", error)
+      toast.error("Failed to update status")
+    }
+  }
+
   const handleEdit = (invoice: Invoice) => {
     setEditingInvoice(invoice)
     setFormData({
@@ -148,27 +176,46 @@ export default function InvoicesPage() {
     setEditingInvoice(null)
   }
 
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      })
+
+      if (!response.ok) throw new Error("Logout failed")
+
+      toast.success("Logged out successfully")
+      router.push("/admin/login")
+      router.refresh()
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast.error("Failed to logout")
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "paid":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
       case "overdue":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
       default:
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-background p-8 flex items-center justify-center" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
         <p className="text-muted-foreground">Loading invoices...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen bg-background p-8" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -176,8 +223,13 @@ export default function InvoicesPage() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Link>
-            <h1 className="text-4xl font-serif font-light text-foreground">Invoices</h1>
+            <h1 className="text-4xl font-light text-foreground">Invoices</h1>
           </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open)
             if (!open) resetForm()
@@ -188,7 +240,7 @@ export default function InvoicesPage() {
                 Add Invoice
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
               <DialogHeader>
                 <DialogTitle>{editingInvoice ? "Edit Invoice" : "Create New Invoice"}</DialogTitle>
                 <DialogDescription>
@@ -201,10 +253,10 @@ export default function InvoicesPage() {
                   onValueChange={(value) => setFormData({ ...formData, clientId: value })}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     <SelectValue placeholder="Select Client *" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -230,10 +282,10 @@ export default function InvoicesPage() {
                   value={formData.status}
                   onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
                     <SelectItem value="overdue">Overdue</SelectItem>
@@ -259,60 +311,89 @@ export default function InvoicesPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          {invoices.map((invoice) => (
-            <Card key={invoice.id} className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <h3 className="text-xl font-serif font-light text-foreground">
-                      {invoice.invoiceNumber}
-                    </h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                      {invoice.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground mb-2">Client: {invoice.client.name}</p>
-                  <p className="text-lg font-serif font-light text-foreground mb-2">
-                    ${invoice.amount.toFixed(2)}
-                  </p>
-                  {invoice.dueDate && (
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
-                  {invoice.description && (
-                    <p className="text-sm text-muted-foreground">{invoice.description}</p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(invoice)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(invoice.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Invoice #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Due Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-background divide-y divide-border">
+              {invoices.map((invoice) => (
+                <tr key={invoice.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-foreground">{invoice.invoiceNumber}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-foreground">{invoice.client.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-foreground">${invoice.amount.toFixed(2)}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Select
+                      value={invoice.status}
+                      onValueChange={(value) => handleStatusChange(invoice.id, value)}
+                    >
+                      <SelectTrigger className="w-[140px] h-7 border-0 shadow-none hover:opacity-80 focus:ring-0" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
+                        <SelectValue>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                            {invoice.status.toUpperCase()}
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
+                        <SelectItem value="pending">PENDING</SelectItem>
+                        <SelectItem value="paid">PAID</SelectItem>
+                        <SelectItem value="overdue">OVERDUE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-muted-foreground">
+                      {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : "-"}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-muted-foreground max-w-xs truncate">{invoice.description || "-"}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(invoice)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(invoice.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {invoices.length === 0 && (
+            <div className="p-12 text-center">
+              <p className="text-muted-foreground">No invoices yet. Create your first invoice to get started.</p>
+            </div>
+          )}
         </div>
-
-        {invoices.length === 0 && (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No invoices yet. Create your first invoice to get started.</p>
-          </Card>
-        )}
       </div>
     </div>
   )

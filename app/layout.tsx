@@ -1,10 +1,17 @@
 import type React from "react"
 import type { Metadata } from "next"
 import localFont from "next/font/local"
+import { Open_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { Toaster } from "sonner"
 import "./globals.css"
+
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-open-sans",
+  display: "swap",
+})
 
 const theseasons = localFont({
   src: [
@@ -56,7 +63,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-serif ${theseasons.variable}`}>
+      <body className={`font-serif ${theseasons.variable} ${openSans.variable}`}>
         <Suspense fallback={null}>
           {children}
           <Analytics />

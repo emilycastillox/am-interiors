@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, Edit, Trash2, ArrowLeft } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
 import {
   Dialog,
@@ -22,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
 
 interface Client {
   id: string
@@ -171,6 +172,25 @@ export default function PaymentsPage() {
     setEditingPayment(null)
   }
 
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      })
+
+      if (!response.ok) throw new Error("Logout failed")
+
+      toast.success("Logged out successfully")
+      router.push("/admin/login")
+      router.refresh()
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast.error("Failed to logout")
+    }
+  }
+
   const getFilteredInvoices = () => {
     if (!formData.clientId) return invoices
     return invoices.filter((inv) => inv.id === formData.invoiceId || true)
@@ -178,14 +198,14 @@ export default function PaymentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-background p-8 flex items-center justify-center" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
         <p className="text-muted-foreground">Loading payments...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen bg-background p-8" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -193,8 +213,13 @@ export default function PaymentsPage() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Link>
-            <h1 className="text-4xl font-serif font-light text-foreground">Payments</h1>
+            <h1 className="text-4xl font-light text-foreground">Payments</h1>
           </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open)
             if (!open) resetForm()
@@ -205,7 +230,7 @@ export default function PaymentsPage() {
                 Add Payment
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl" style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
               <DialogHeader>
                 <DialogTitle>{editingPayment ? "Edit Payment" : "Record New Payment"}</DialogTitle>
                 <DialogDescription>
@@ -220,10 +245,10 @@ export default function PaymentsPage() {
                   }}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     <SelectValue placeholder="Select Client *" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -232,14 +257,14 @@ export default function PaymentsPage() {
                   </SelectContent>
                 </Select>
                 <Select
-                  value={formData.invoiceId}
-                  onValueChange={(value) => setFormData({ ...formData, invoiceId: value })}
+                  value={formData.invoiceId || undefined}
+                  onValueChange={(value) => setFormData({ ...formData, invoiceId: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     <SelectValue placeholder="Select Invoice (Optional)" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                  <SelectContent style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
+                    <SelectItem value="none">None</SelectItem>
                     {invoices
                       .filter((inv) => inv.id === formData.invoiceId || true)
                       .map((invoice) => (
@@ -265,14 +290,14 @@ export default function PaymentsPage() {
                   required
                 />
                 <Select
-                  value={formData.method}
-                  onValueChange={(value) => setFormData({ ...formData, method: value })}
+                  value={formData.method || undefined}
+                  onValueChange={(value) => setFormData({ ...formData, method: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
                     <SelectValue placeholder="Payment Method (Optional)" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                  <SelectContent style={{ fontFamily: 'var(--font-open-sans), sans-serif' }}>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="check">Check</SelectItem>
                     <SelectItem value="credit_card">Credit Card</SelectItem>
@@ -293,6 +318,7 @@ export default function PaymentsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -301,7 +327,7 @@ export default function PaymentsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-2">
-                    <h3 className="text-xl font-serif font-light text-foreground">
+                    <h3 className="text-xl font-light text-foreground">
                       ${payment.amount.toFixed(2)}
                     </h3>
                     {payment.method && (
