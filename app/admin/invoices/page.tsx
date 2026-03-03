@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, Edit, Trash2, ArrowLeft, LogOut } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, LogOut, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import {
@@ -27,6 +27,7 @@ import {
 interface Client {
   id: string
   name: string
+  email?: string | null
 }
 
 interface Invoice {
@@ -54,7 +55,9 @@ export default function InvoicesPage() {
     status: "pending",
     dueDate: "",
     description: "",
+    skipEmail: false,
   })
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchInvoices()
@@ -89,16 +92,26 @@ export default function InvoicesPage() {
     try {
       const url = editingInvoice ? `/api/invoices/${editingInvoice.id}` : "/api/invoices"
       const method = editingInvoice ? "PUT" : "POST"
+      const body = editingInvoice
+        ? { clientId: formData.clientId, invoiceNumber: formData.invoiceNumber, amount: formData.amount, status: formData.status, dueDate: formData.dueDate || null, description: formData.description }
+        : { ...formData, dueDate: formData.dueDate || null, skipEmail: formData.skipEmail }
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) throw new Error("Failed to save invoice")
 
-      toast.success(editingInvoice ? "Invoice updated successfully" : "Invoice created successfully")
+      const data = await response.json()
+      if (!editingInvoice && data.emailSent) {
+        toast.success("Invoice created and email sent to client")
+      } else if (!editingInvoice && data.emailSent === false) {
+        toast.success("Invoice created (email not sent)")
+      } else {
+        toast.success(editingInvoice ? "Invoice updated successfully" : "Invoice created successfully")
+      }
       setIsDialogOpen(false)
       resetForm()
       fetchInvoices()
@@ -151,6 +164,21 @@ export default function InvoicesPage() {
     }
   }
 
+  const handleSendEmail = async (invoice: Invoice) => {
+    setSendingEmailId(invoice.id)
+    try {
+      const response = await fetch(`/api/invoices/${invoice.id}/send`, { method: "POST" })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Failed to send email")
+      toast.success(`Invoice sent to ${invoice.client.email}`)
+    } catch (error) {
+      console.error("Error sending invoice email:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to send invoice email")
+    } finally {
+      setSendingEmailId(null)
+    }
+  }
+
   const handleEdit = (invoice: Invoice) => {
     setEditingInvoice(invoice)
     setFormData({
@@ -160,6 +188,7 @@ export default function InvoicesPage() {
       status: invoice.status,
       dueDate: invoice.dueDate ? invoice.dueDate.split("T")[0] : "",
       description: invoice.description || "",
+      skipEmail: false,
     })
     setIsDialogOpen(true)
   }
@@ -172,6 +201,7 @@ export default function InvoicesPage() {
       status: "pending",
       dueDate: "",
       description: "",
+      skipEmail: false,
     })
     setEditingInvoice(null)
   }
@@ -302,6 +332,17 @@ export default function InvoicesPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
+                {!editingInvoice && (
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.skipEmail}
+                      onChange={(e) => setFormData({ ...formData, skipEmail: e.target.checked })}
+                      className="rounded border-input"
+                    />
+                    Skip sending email to client
+                  </label>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
@@ -368,6 +409,15 @@ export default function InvoicesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSendEmail(invoice)}
+                        disabled={sendingEmailId === invoice.id || !invoice.client?.email}
+                        title={invoice.client.email ? "Send invoice by email" : "Client has no email"}
+                      >
+                        <Mail className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
