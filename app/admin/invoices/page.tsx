@@ -107,6 +107,8 @@ export default function InvoicesPage() {
       const data = await response.json()
       if (!editingInvoice && data.emailSent) {
         toast.success("Invoice created and email sent to client")
+      } else if (!editingInvoice && data.emailError) {
+        toast.error(`Invoice created but PDF/email failed: ${data.emailError}`)
       } else if (!editingInvoice && data.emailSent === false) {
         toast.success("Invoice created (email not sent)")
       } else {

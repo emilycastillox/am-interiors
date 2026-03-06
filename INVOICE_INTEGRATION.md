@@ -208,11 +208,11 @@ To customize the email content, modify the `text` and `html` fields in the `send
 - Check Vercel function logs for error messages
 - Verify your Mailgun domain is verified and DNS is configured
 
-### PDF generation fails
-- Check that `INVOICING_API_KEY` is set correctly
-- Verify your InvoicingAPI account is active
+### PDF generation fails (e.g. "Unauthorized client" / 401)
+- **401 Unauthorized client:** Your `INVOICING_API_KEY` in `.env` is missing, wrong, or inactive. Get the key from [invoicingapi.com](https://invoicingapi.com) (dashboard or API settings) and set `INVOICING_API_KEY` in `.env`. Restart the dev server after changing.
+- Check that your InvoicingAPI account is active
 - Check the invoice data format matches InvoicingAPI requirements
-- Review Vercel function logs for specific error messages
+- Review server logs for the full error message
 
 ### Email sent but attachment missing
 - Check Mailgun logs in your dashboard

@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     })
 
     let emailSent = false
+    let pdfOrEmailError: string | undefined
     // Generate invoice PDF and send email (if not skipped)
     if (!skipEmail && invoice.client.email) {
       try {
@@ -111,15 +112,14 @@ export async function POST(request: NextRequest) {
         emailSent = true
         console.log(`Invoice ${invoice.invoiceNumber} generated and sent to ${invoice.client.email}`)
       } catch (emailError: any) {
-        // Log error but don't fail the invoice creation
+        pdfOrEmailError = emailError?.message || String(emailError)
         console.error('Error generating invoice PDF or sending email:', emailError)
-        // You might want to store this error in the database or send to an error tracking service
       }
     } else if (!skipEmail && !invoice.client.email) {
       console.warn(`Invoice ${invoice.invoiceNumber} created but client has no email address`)
     }
 
-    return NextResponse.json({ invoice, emailSent }, { status: 201 })
+    return NextResponse.json({ invoice, emailSent, ...(pdfOrEmailError != null && { emailError: pdfOrEmailError }) }, { status: 201 })
   } catch (error) {
     console.error('Error creating invoice:', error)
     return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 })
