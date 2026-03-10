@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateInvoicePDF, type InvoiceData, type InvoiceLineItem } from '@/lib/invoicingapi'
+import { generateInvoicePDF, DEFAULT_ISSUER_ADDRESS, type InvoiceData, type InvoiceLineItem } from '@/lib/invoicingapi'
 import { sendInvoiceEmail } from '@/lib/mailgun'
 
 /**
@@ -54,6 +54,7 @@ export async function POST(
       currency: 'USD',
       notes: invoice.description || undefined,
       isPaid: invoice.status === 'paid',
+      issuerAddress: DEFAULT_ISSUER_ADDRESS,
     }
 
     const pdfBuffer = await generateInvoicePDF(invoiceData)

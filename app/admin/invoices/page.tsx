@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, Edit, Trash2, ArrowLeft, LogOut, Mail } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, LogOut, Mail, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import {
@@ -58,6 +58,8 @@ export default function InvoicesPage() {
     skipEmail: false,
   })
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchInvoices()
@@ -89,6 +91,7 @@ export default function InvoicesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
     try {
       const url = editingInvoice ? `/api/invoices/${editingInvoice.id}` : "/api/invoices"
       const method = editingInvoice ? "PUT" : "POST"
@@ -120,12 +123,15 @@ export default function InvoicesPage() {
     } catch (error) {
       console.error("Error saving invoice:", error)
       toast.error("Failed to save invoice")
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this invoice?")) return
 
+    setDeletingId(id)
     try {
       const response = await fetch(`/api/invoices/${id}`, { method: "DELETE" })
       if (!response.ok) throw new Error("Failed to delete invoice")
@@ -135,6 +141,8 @@ export default function InvoicesPage() {
     } catch (error) {
       console.error("Error deleting invoice:", error)
       toast.error("Failed to delete invoice")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -346,10 +354,19 @@ export default function InvoicesPage() {
                   </label>
                 )}
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
                     Cancel
                   </Button>
-                  <Button type="submit">{editingInvoice ? "Update" : "Create"}</Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {editingInvoice ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      editingInvoice ? "Update" : "Create"
+                    )}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -418,7 +435,11 @@ export default function InvoicesPage() {
                         disabled={sendingEmailId === invoice.id || !invoice.client?.email}
                         title={invoice.client.email ? "Send invoice by email" : "Client has no email"}
                       >
-                        <Mail className="w-4 h-4" />
+                        {sendingEmailId === invoice.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Mail className="w-4 h-4" />
+                        )}
                       </Button>
                       <Button
                         variant="ghost"
@@ -431,8 +452,13 @@ export default function InvoicesPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(invoice.id)}
+                        disabled={deletingId === invoice.id}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deletingId === invoice.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </Button>
                     </div>
                   </td>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, Edit, Trash2, ArrowLeft, LogOut } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, LogOut, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import {
@@ -31,6 +31,8 @@ interface Client {
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [formData, setFormData] = useState({
@@ -60,6 +62,7 @@ export default function ClientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
     try {
       const url = editingClient ? `/api/clients/${editingClient.id}` : "/api/clients"
       const method = editingClient ? "PUT" : "POST"
@@ -79,12 +82,15 @@ export default function ClientsPage() {
     } catch (error) {
       console.error("Error saving client:", error)
       toast.error("Failed to save client")
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this client?")) return
 
+    setDeletingId(id)
     try {
       const response = await fetch(`/api/clients/${id}`, { method: "DELETE" })
       if (!response.ok) throw new Error("Failed to delete client")
@@ -94,6 +100,8 @@ export default function ClientsPage() {
     } catch (error) {
       console.error("Error deleting client:", error)
       toast.error("Failed to delete client")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -203,10 +211,19 @@ export default function ClientsPage() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
                     Cancel
                   </Button>
-                  <Button type="submit">{editingClient ? "Update" : "Create"}</Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {editingClient ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      editingClient ? "Update" : "Create"
+                    )}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -257,8 +274,13 @@ export default function ClientsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(client.id)}
+                        disabled={deletingId === client.id}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deletingId === client.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </Button>
                     </div>
                   </td>

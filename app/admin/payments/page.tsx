@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, Edit, Trash2, ArrowLeft, LogOut } from "lucide-react"
+import { Plus, Edit, Trash2, ArrowLeft, LogOut, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
@@ -53,6 +53,8 @@ export default function PaymentsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
   const [formData, setFormData] = useState({
@@ -105,6 +107,7 @@ export default function PaymentsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
     try {
       const url = editingPayment ? `/api/payments/${editingPayment.id}` : "/api/payments"
       const method = editingPayment ? "PUT" : "POST"
@@ -128,12 +131,15 @@ export default function PaymentsPage() {
     } catch (error) {
       console.error("Error saving payment:", error)
       toast.error("Failed to save payment")
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this payment?")) return
 
+    setDeletingId(id)
     try {
       const response = await fetch(`/api/payments/${id}`, { method: "DELETE" })
       if (!response.ok) throw new Error("Failed to delete payment")
@@ -144,6 +150,8 @@ export default function PaymentsPage() {
     } catch (error) {
       console.error("Error deleting payment:", error)
       toast.error("Failed to delete payment")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -310,10 +318,19 @@ export default function PaymentsPage() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
                     Cancel
                   </Button>
-                  <Button type="submit">{editingPayment ? "Update" : "Create"}</Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {editingPayment ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      editingPayment ? "Update" : "Create"
+                    )}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -361,8 +378,13 @@ export default function PaymentsPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDelete(payment.id)}
+                    disabled={deletingId === payment.id}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {deletingId === payment.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>

@@ -21,6 +21,24 @@ export interface RecipientAddress {
   telephone?: string
 }
 
+/** Issuer/sender address shown on the invoice (your business). */
+export interface IssuerAddress {
+  name?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  country?: string
+  telephone?: string
+  email?: string
+}
+
+/** Default issuer/sender address shown on generated invoices. */
+export const DEFAULT_ISSUER_ADDRESS: IssuerAddress = {
+  name: 'AM Interiors',
+  addressLine1: '123 street ave',
+  addressLine2: 'Bellingham, MA',
+}
+
 export interface InvoiceData {
   template?: string
   color?: string
@@ -34,6 +52,7 @@ export interface InvoiceData {
   currency?: string
   notes?: string
   isPaid?: boolean
+  issuerAddress?: IssuerAddress
 }
 
 /**
